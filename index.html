@@ -1,0 +1,174 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Tải File Lên Google Drive</title>
+    <!-- Tải Tailwind CSS để làm đẹp giao diện -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Tải Google Fonts để có font chữ đẹp hơn -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        /* CSS tùy chỉnh */
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #f0f2f5;
+        }
+        /* Hiệu ứng loading spinner */
+        .loader {
+            border: 4px solid #f3f3f3;
+            border-radius: 50%;
+            border-top: 4px solid #3498db;
+            width: 40px;
+            height: 40px;
+            -webkit-animation: spin 2s linear infinite; /* Safari */
+            animation: spin 2s linear infinite;
+        }
+        @-webkit-keyframes spin {
+            0% { -webkit-transform: rotate(0deg); }
+            100% { -webkit-transform: rotate(360deg); }
+        }
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+    </style>
+</head>
+<body class="flex items-center justify-center min-h-screen">
+
+    <div class="w-full max-w-2xl mx-auto bg-white rounded-xl shadow-lg p-8 space-y-6">
+        <div class="text-center">
+            <h1 class="text-3xl font-bold text-gray-800">Tải File Lên Google Drive</h1>
+            <p class="text-gray-500 mt-2">Chọn một file và tải nó lên Drive của bạn một cách an toàn.</p>
+        </div>
+
+        <!-- Vùng Upload File -->
+        <div id="upload_section" class="text-center p-8 border-2 border-dashed border-gray-300 rounded-xl">
+            <input type="file" id="file_input" class="hidden">
+            <label for="file_input" class="cursor-pointer">
+                <svg class="mx-auto h-12 w-12 text-gray-400" stroke="currentColor" fill="none" viewBox="0 0 48 48" aria-hidden="true">
+                    <path d="M28 8H12a4 4 0 00-4 4v20m32-12v8m0 0v8a4 4 0 01-4 4H12a4 4 0 01-4-4v-4m32-4l-3.172-3.172a4 4 0 00-5.656 0L28 28M8 32l9.172-9.172a4 4 0 015.656 0L28 28" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
+                </svg>
+                <p class="mt-2 text-lg font-medium text-blue-600">Nhấn để chọn file</p>
+                <p id="file_name" class="mt-1 text-sm text-gray-500"></p>
+            </label>
+            <button id="upload_button" class="hidden mt-4 bg-green-600 hover:bg-green-700 text-white font-bold py-3 px-6 rounded-lg transition duration-300 disabled:bg-gray-400" disabled>Tải lên</button>
+        </div>
+
+        <!-- Vùng hiển thị kết quả -->
+        <div id="result_section" class="hidden text-center space-y-4">
+             <div id="loading_indicator" class="hidden mx-auto loader"></div>
+            <p id="status_message" class="text-lg font-medium text-gray-700"></p>
+            <div id="link_container" class="hidden flex items-center justify-center">
+                <input id="file_link" type="text" readonly class="w-full max-w-md p-3 border border-gray-300 rounded-l-lg bg-gray-50 focus:outline-none focus:ring-2 focus:ring-blue-500">
+                <button id="copy_button" class="bg-gray-700 hover:bg-gray-800 text-white font-bold p-3 rounded-r-lg">
+                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"></path></svg>
+                </button>
+            </div>
+            <p id="copy_success" class="text-green-500 font-medium hidden">Đã sao chép link!</p>
+        </div>
+    </div>
+
+    <script type="text/javascript">
+        // ===================================================================================
+        // CẤU HÌNH
+        // Thay thế URL này bằng URL của ứng dụng backend bạn đã triển khai trên Render.
+        // Ví dụ: 'https://my-drive-uploader.onrender.com'
+        // ===================================================================================
+        const BACKEND_URL = 'YOUR_RENDER_BACKEND_URL'; // <-- THAY BẰNG URL BACKEND CỦA BẠN
+
+        // Lấy các phần tử trên trang
+        const uploadSection = document.getElementById('upload_section');
+        const resultSection = document.getElementById('result_section');
+        const fileInput = document.getElementById('file_input');
+        const fileNameDisplay = document.getElementById('file_name');
+        const uploadButton = document.getElementById('upload_button');
+        const statusMessage = document.getElementById('status_message');
+        const loadingIndicator = document.getElementById('loading_indicator');
+        const linkContainer = document.getElementById('link_container');
+        const fileLinkInput = document.getElementById('file_link');
+        const copyButton = document.getElementById('copy_button');
+        const copySuccessMessage = document.getElementById('copy_success');
+
+        // Xử lý khi người dùng chọn file
+        fileInput.onchange = () => {
+            if (fileInput.files.length > 0) {
+                const file = fileInput.files[0];
+                fileNameDisplay.textContent = `File đã chọn: ${file.name} (${(file.size / 1024 / 1024).toFixed(2)} MB)`;
+                uploadButton.disabled = false;
+                uploadButton.style.display = 'inline-block';
+                resultSection.style.display = 'none'; // Ẩn kết quả cũ
+            }
+        };
+        
+        // Xử lý khi nhấn nút Tải lên
+        uploadButton.onclick = () => {
+            if (BACKEND_URL === 'YOUR_RENDER_BACKEND_URL') {
+                alert('Vui lòng cấu hình BACKEND_URL trong code trước!');
+                return;
+            }
+            if (fileInput.files.length > 0) {
+                uploadFile(fileInput.files[0]);
+            } else {
+                alert("Vui lòng chọn một file trước khi tải lên.");
+            }
+        };
+
+        // Hàm chính để tải file lên backend
+        async function uploadFile(file) {
+            // 1. Chuẩn bị FormData để gửi file
+            const formData = new FormData();
+            formData.append('file', file);
+
+            // 2. Hiển thị trạng thái đang tải
+            resultSection.style.display = 'block';
+            loadingIndicator.style.display = 'block';
+            statusMessage.textContent = `Đang tải lên file "${file.name}"...`;
+            uploadButton.disabled = true;
+            linkContainer.style.display = 'none';
+            copySuccessMessage.style.display = 'none';
+
+            try {
+                // 3. Gửi yêu cầu POST đến backend
+                const response = await fetch(`${BACKEND_URL}/upload`, {
+                    method: 'POST',
+                    body: formData,
+                });
+
+                const result = await response.json();
+
+                if (!response.ok) {
+                    // Nếu server trả về lỗi, hiển thị thông báo lỗi
+                    throw new Error(result.message || 'Có lỗi xảy ra từ phía server.');
+                }
+
+                // 4. Hiển thị kết quả thành công
+                loadingIndicator.style.display = 'none';
+                statusMessage.textContent = 'Đã tạo link chia sẻ thành công!';
+                fileLinkInput.value = result.link;
+                linkContainer.style.display = 'flex';
+
+            } catch (error) {
+                console.error(error);
+                loadingIndicator.style.display = 'none';
+                statusMessage.textContent = `Đã xảy ra lỗi: ${error.message}`;
+            } finally {
+                // 5. Kích hoạt lại nút upload dù thành công hay thất bại
+                uploadButton.disabled = false;
+            }
+        }
+        
+        // Xử lý sao chép link
+        copyButton.onclick = () => {
+            fileLinkInput.select();
+            document.execCommand('copy');
+            copySuccessMessage.style.display = 'block';
+            setTimeout(() => {
+                copySuccessMessage.style.display = 'none';
+            }, 2000);
+        };
+    </script>
+</body>
+</html>
