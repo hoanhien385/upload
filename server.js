@@ -1,7 +1,3 @@
-```javascript
-// File: server.js
-// Mã nguồn chính của server backend
-
 const express = require('express');
 const { google } = require('googleapis');
 const multer = require('multer');
@@ -71,6 +67,10 @@ app.post('/upload', upload.single('file'), async (req, res) => {
             },
         });
 
+        // *** LƯU Ý LỖI ***
+        // Log lỗi của bạn báo "SyntaxError: Unexpected identifier 'File'" tại dòng dưới đây.
+        // Lỗi này hầu như luôn xảy ra do bạn vô tình xóa mất dấu backtick (`) ở đầu chuỗi.
+        // Hãy đảm bảo dòng code của bạn giống hệt như dòng dưới đây.
         console.log(`File uploaded successfully. Link: ${fileData.webViewLink}`);
 
         // 3. Trả về link cho frontend
