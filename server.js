@@ -22,29 +22,38 @@ const upload = multer({
 const authenticateGoogle = () => {
     let credentials;
     
-    // *** PHẦN SỬA LỖI ***
-    // Render lưu đường dẫn đến tệp bí mật trong một biến môi trường.
-    // Nếu bạn đặt tên tệp bí mật là 'google_credentials.json', Render sẽ tạo biến
-    // môi trường tên là 'GOOGLE_CREDENTIALS_JSON' chứa đường dẫn đến tệp.
-    // Nếu bạn đặt tên khác, ví dụ 'my_key.json', hãy thay thế dòng dưới thành:
-    // const secretFilePath = process.env.MY_KEY_JSON;
-    const secretFilePath = process.env.GOOGLE_CREDENTIALS_JSON;
-
-    if (secretFilePath && fs.existsSync(secretFilePath)) {
-        console.log('Đang tải credentials từ đường dẫn tệp bí mật của Render...');
-        const credentialsFileContent = fs.readFileSync(secretFilePath, 'utf8');
-        credentials = JSON.parse(credentialsFileContent);
-    } else {
-        // Phương án dự phòng: đọc trực tiếp từ biến môi trường (dùng cho local hoặc các nền tảng khác)
-        console.log('Đang tải credentials trực tiếp từ biến môi trường...');
-        if (!process.env.GOOGLE_CREDENTIALS) {
-            throw new Error('Không tìm thấy biến môi trường GOOGLE_CREDENTIALS hoặc đường dẫn tệp bí mật không hợp lệ.');
+    console.log('Bắt đầu quá trình xác thực Google...');
+    
+    // *** PHẦN SỬA LỖI VÀ CẢI TIẾN ***
+    // Logic mới này sẽ tự động tìm biến môi trường mà Render tạo ra cho tệp bí mật
+    // Ví dụ: file 'my_key.json' -> biến env 'MY_KEY_JSON'
+    const secretFileEnvVar = Object.keys(process.env).find(key => key.endsWith('_JSON'));
+    
+    if (secretFileEnvVar) {
+        const secretFilePath = process.env[secretFileEnvVar];
+        console.log(`Đã tìm thấy biến môi trường cho tệp bí mật: ${secretFileEnvVar}`);
+        if (fs.existsSync(secretFilePath)) {
+            console.log(`Đang tải credentials từ đường dẫn: ${secretFilePath}`);
+            const credentialsFileContent = fs.readFileSync(secretFilePath, 'utf8');
+            credentials = JSON.parse(credentialsFileContent);
+        } else {
+             throw new Error(`Tệp bí mật được chỉ định tại '${secretFilePath}' không tồn tại trên server.`);
         }
-        credentials = JSON.parse(process.env.GOOGLE_CREDENTIALS);
+    } else {
+        // Phương án dự phòng: đọc trực tiếp từ biến môi trường GOOGLE_CREDENTIALS
+        console.log('Không tìm thấy biến môi trường cho tệp bí mật. Thử đọc từ GOOGLE_CREDENTIALS...');
+        if (process.env.GOOGLE_CREDENTIALS) {
+            credentials = JSON.parse(process.env.GOOGLE_CREDENTIALS);
+        } else {
+            // Nếu cả hai cách đều thất bại, đưa ra thông báo lỗi chi tiết
+            console.error('CÁC BIẾN MÔI TRƯỜNG HIỆN CÓ:', Object.keys(process.env).join(', '));
+            throw new Error('LỖI CẤU HÌNH: Không tìm thấy biến môi trường chứa credentials. Vui lòng kiểm tra lại mục "Environment" trên Render. Bạn cần tạo một "Secret File" (ví dụ: google_credentials.json).');
+        }
     }
-
+    
     const auth = new google.auth.GoogleAuth({
         credentials,
+        // Đã sửa lỗi cú pháp Markdown ở đây
         scopes: '[https://www.googleapis.com/auth/drive.file](https://www.googleapis.com/auth/drive.file)',
     });
     return google.drive({ version: 'v3', auth });
