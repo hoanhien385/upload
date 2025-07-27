@@ -3,60 +3,43 @@ const { google } = require('googleapis');
 const multer = require('multer');
 const cors = require('cors');
 const stream = require('stream');
-const fs = require('fs'); // Thêm module 'fs' để đọc file
-require('dotenv').config(); // Để đọc các biến môi trường từ file .env (khi chạy local)
+require('dotenv').config();
 
 const app = express();
 const port = process.env.PORT || 3000;
 
-// Cấu hình CORS để cho phép frontend truy cập
+// Cấu hình CORS
 app.use(cors());
 
-// Cấu hình Multer để xử lý file upload trong bộ nhớ
+// Cấu hình Multer
 const upload = multer({
     storage: multer.memoryStorage(),
-    limits: { fileSize: 20 * 1024 * 1024 }, // Giới hạn file 20MB, bạn có thể thay đổi
+    limits: { fileSize: 20 * 1024 * 1024 },
 });
 
-// Hàm khởi tạo và xác thực với Google Drive API
+// *** PHƯƠNG THỨC XÁC THỰC MỚI - ĐƠN GIẢN HƠN ***
 const authenticateGoogle = () => {
-    let credentials;
-    
     console.log('Bắt đầu quá trình xác thực Google...');
-    
-    // *** PHẦN SỬA LỖI VÀ CẢI TIẾN ***
-    // Logic mới này sẽ tự động tìm biến môi trường mà Render tạo ra cho tệp bí mật
-    // Ví dụ: file 'my_key.json' -> biến env 'MY_KEY_JSON'
-    const secretFileEnvVar = Object.keys(process.env).find(key => key.endsWith('_JSON'));
-    
-    if (secretFileEnvVar) {
-        const secretFilePath = process.env[secretFileEnvVar];
-        console.log(`Đã tìm thấy biến môi trường cho tệp bí mật: ${secretFileEnvVar}`);
-        if (fs.existsSync(secretFilePath)) {
-            console.log(`Đang tải credentials từ đường dẫn: ${secretFilePath}`);
-            const credentialsFileContent = fs.readFileSync(secretFilePath, 'utf8');
-            credentials = JSON.parse(credentialsFileContent);
-        } else {
-             throw new Error(`Tệp bí mật được chỉ định tại '${secretFilePath}' không tồn tại trên server.`);
-        }
-    } else {
-        // Phương án dự phòng: đọc trực tiếp từ biến môi trường GOOGLE_CREDENTIALS
-        console.log('Không tìm thấy biến môi trường cho tệp bí mật. Thử đọc từ GOOGLE_CREDENTIALS...');
-        if (process.env.GOOGLE_CREDENTIALS) {
-            credentials = JSON.parse(process.env.GOOGLE_CREDENTIALS);
-        } else {
-            // Nếu cả hai cách đều thất bại, đưa ra thông báo lỗi chi tiết
-            console.error('CÁC BIẾN MÔI TRƯỜNG HIỆN CÓ:', Object.keys(process.env).join(', '));
-            throw new Error('LỖI CẤU HÌNH: Không tìm thấy biến môi trường chứa credentials. Vui lòng kiểm tra lại mục "Environment" trên Render. Bạn cần tạo một "Secret File" (ví dụ: google_credentials.json).');
-        }
+
+    // Lấy nội dung JSON trực tiếp từ biến môi trường GOOGLE_CREDENTIALS
+    const credentialsJson = process.env.GOOGLE_CREDENTIALS;
+
+    if (!credentialsJson) {
+        console.error('CÁC BIẾN MÔI TRƯỜNG HIỆN CÓ:', Object.keys(process.env).join(', '));
+        throw new Error('LỖI CẤU HÌNH: Không tìm thấy biến môi trường "GOOGLE_CREDENTIALS". Vui lòng kiểm tra lại mục "Environment" trên Render.');
     }
-    
-    const auth = new google.auth.GoogleAuth({
-        credentials,
-        // Đã sửa lỗi cú pháp ở đây. Nó phải là một chuỗi bình thường.
-        scopes: '[https://www.googleapis.com/auth/drive.file](https://www.googleapis.com/auth/drive.file)',
-    });
-    return google.drive({ version: 'v3', auth });
+
+    try {
+        const credentials = JSON.parse(credentialsJson);
+        const auth = new google.auth.GoogleAuth({
+            credentials,
+            scopes: '[https://www.googleapis.com/auth/drive.file](https://www.googleapis.com/auth/drive.file)',
+        });
+        return google.drive({ version: 'v3', auth });
+    } catch (error) {
+        console.error('Lỗi khi phân tích JSON từ biến GOOGLE_CREDENTIALS:', error.message);
+        throw new Error('Biến môi trường "GOOGLE_CREDENTIALS" chứa nội dung JSON không hợp lệ.');
+    }
 };
 
 // Endpoint để upload file
@@ -70,7 +53,7 @@ app.post('/upload', upload.single('file'), async (req, res) => {
         const bufferStream = new stream.PassThrough();
         bufferStream.end(req.file.buffer);
 
-        // 1. Tải file lên Google Drive
+        // Tải file lên Google Drive
         const { data: fileData } = await drive.files.create({
             media: {
                 mimeType: req.file.mimetype,
@@ -84,10 +67,10 @@ app.post('/upload', upload.single('file'), async (req, res) => {
         });
 
         if (!fileData.id) {
-             throw new Error('Upload file không thành công, không nhận được ID file.');
+            throw new Error('Upload file không thành công, không nhận được ID file.');
         }
 
-        // 2. Cấp quyền công khai cho file vừa tải lên
+        // Cấp quyền công khai cho file
         await drive.permissions.create({
             fileId: fileData.id,
             requestBody: {
@@ -98,7 +81,7 @@ app.post('/upload', upload.single('file'), async (req, res) => {
 
         console.log(`File uploaded successfully. Link: ${fileData.webViewLink}`);
 
-        // 3. Trả về link cho frontend
+        // Trả về link cho frontend
         res.status(200).json({
             message: 'Tải file thành công!',
             link: fileData.webViewLink
