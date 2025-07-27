@@ -3,6 +3,7 @@ const { google } = require('googleapis');
 const multer = require('multer');
 const cors = require('cors');
 const stream = require('stream');
+const fs = require('fs'); // Thêm module 'fs' để đọc file
 require('dotenv').config(); // Để đọc các biến môi trường từ file .env (khi chạy local)
 
 const app = express();
@@ -19,9 +20,28 @@ const upload = multer({
 
 // Hàm khởi tạo và xác thực với Google Drive API
 const authenticateGoogle = () => {
-    // Đọc thông tin xác thực từ biến môi trường
-    // Trên Render, bạn sẽ tạo một Secret File thay vì dùng file .json trực tiếp
-    const credentials = JSON.parse(process.env.GOOGLE_CREDENTIALS);
+    let credentials;
+    
+    // *** PHẦN SỬA LỖI ***
+    // Render lưu đường dẫn đến tệp bí mật trong một biến môi trường.
+    // Nếu bạn đặt tên tệp bí mật là 'google_credentials.json', Render sẽ tạo biến
+    // môi trường tên là 'GOOGLE_CREDENTIALS_JSON' chứa đường dẫn đến tệp.
+    // Nếu bạn đặt tên khác, ví dụ 'my_key.json', hãy thay thế dòng dưới thành:
+    // const secretFilePath = process.env.MY_KEY_JSON;
+    const secretFilePath = process.env.GOOGLE_CREDENTIALS_JSON;
+
+    if (secretFilePath && fs.existsSync(secretFilePath)) {
+        console.log('Đang tải credentials từ đường dẫn tệp bí mật của Render...');
+        const credentialsFileContent = fs.readFileSync(secretFilePath, 'utf8');
+        credentials = JSON.parse(credentialsFileContent);
+    } else {
+        // Phương án dự phòng: đọc trực tiếp từ biến môi trường (dùng cho local hoặc các nền tảng khác)
+        console.log('Đang tải credentials trực tiếp từ biến môi trường...');
+        if (!process.env.GOOGLE_CREDENTIALS) {
+            throw new Error('Không tìm thấy biến môi trường GOOGLE_CREDENTIALS hoặc đường dẫn tệp bí mật không hợp lệ.');
+        }
+        credentials = JSON.parse(process.env.GOOGLE_CREDENTIALS);
+    }
 
     const auth = new google.auth.GoogleAuth({
         credentials,
@@ -67,10 +87,6 @@ app.post('/upload', upload.single('file'), async (req, res) => {
             },
         });
 
-        // *** LƯU Ý LỖI ***
-        // Log lỗi của bạn báo "SyntaxError: Unexpected identifier 'File'" tại dòng dưới đây.
-        // Lỗi này hầu như luôn xảy ra do bạn vô tình xóa mất dấu backtick (`) ở đầu chuỗi.
-        // Hãy đảm bảo dòng code của bạn giống hệt như dòng dưới đây.
         console.log(`File uploaded successfully. Link: ${fileData.webViewLink}`);
 
         // 3. Trả về link cho frontend
