@@ -74,10 +74,9 @@
     <script type="text/javascript">
         // ===================================================================================
         // CẤU HÌNH
-        // Thay thế URL này bằng URL của ứng dụng backend bạn đã triển khai trên Render.
-        // Ví dụ: 'https://my-drive-uploader.onrender.com'
+        // URL của ứng dụng backend bạn đã triển khai trên Render.
         // ===================================================================================
-        const BACKEND_URL = 'https://upload-nxbg.onrender.com'; // <-- THAY BẰNG URL BACKEND CỦA BẠN
+        const BACKEND_URL = 'https://upload-nxbg.onrender.com'; // URL backend của bạn
 
         // Lấy các phần tử trên trang
         const uploadSection = document.getElementById('upload_section');
@@ -105,10 +104,8 @@
         
         // Xử lý khi nhấn nút Tải lên
         uploadButton.onclick = () => {
-            if (BACKEND_URL === 'YOUR_RENDER_BACKEND_URL') {
-                alert('Vui lòng cấu hình BACKEND_URL trong code trước!');
-                return;
-            }
+            // Đã xóa phần kiểm tra URL không cần thiết.
+            // Giờ đây, ứng dụng sẽ luôn cố gắng upload khi nhấn nút.
             if (fileInput.files.length > 0) {
                 uploadFile(fileInput.files[0]);
             } else {
