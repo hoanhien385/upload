@@ -53,7 +53,7 @@ const authenticateGoogle = () => {
     
     const auth = new google.auth.GoogleAuth({
         credentials,
-        // Đã sửa lỗi cú pháp Markdown ở đây
+        // Đã sửa lỗi cú pháp ở đây. Nó phải là một chuỗi bình thường.
         scopes: '[https://www.googleapis.com/auth/drive.file](https://www.googleapis.com/auth/drive.file)',
     });
     return google.drive({ version: 'v3', auth });
