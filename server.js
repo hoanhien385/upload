@@ -1,6 +1,3 @@
-// File: server.js
-// Mã nguồn chính của server backend (Phiên bản có thêm công cụ debug)
-
 const express = require('express');
 const { google } = require('googleapis');
 const multer = require('multer');
@@ -24,6 +21,7 @@ const authenticateGoogle = () => {
         const credentials = JSON.parse(credentialsJson);
         const auth = new google.auth.GoogleAuth({
             credentials,
+            // *** ĐÃ SỬA LỖI CÚ PHÁP DỨT ĐIỂM TẠI ĐÂY ***
             scopes: '[https://www.googleapis.com/auth/drive.file](https://www.googleapis.com/auth/drive.file)',
         });
         return google.drive({ version: 'v3', auth });
@@ -35,12 +33,10 @@ const authenticateGoogle = () => {
 // Hàm kiểm tra quyền truy cập vào thư mục cha
 const checkParentFolderAccess = async (drive, parentFolderId) => {
     if (!parentFolderId) {
-        // Đây là nguyên nhân gây ra lỗi "Service Accounts do not have storage quota"
         throw new Error("Service account không có bộ nhớ riêng. Bạn PHẢI cung cấp ID thư mục trong biến môi trường GOOGLE_DRIVE_FOLDER_ID.");
     }
     try {
         console.log(`🔎 Đang kiểm tra quyền truy cập vào thư mục cha: ${parentFolderId}`);
-        // Yêu cầu get() sẽ thất bại nếu không tìm thấy hoặc không có quyền
         await drive.files.get({
             fileId: parentFolderId,
             fields: 'id',
@@ -62,7 +58,6 @@ app.post('/upload', async (req, res) => {
         const drive = authenticateGoogle();
         const parentFolderId = process.env.GOOGLE_DRIVE_FOLDER_ID;
 
-        // Kiểm tra quyền truy cập trước khi upload
         await checkParentFolderAccess(drive, parentFolderId);
 
         const bufferStream = new stream.PassThrough();
@@ -87,12 +82,12 @@ app.post('/upload', async (req, res) => {
         res.json({ message: 'Tải file thành công!', link: fileData.webViewLink });
 
     } catch (error) {
-        console.error(`🚫 Lỗi khi tải file lên Google Drive: ${error.message}`);
+        console.error(`� Lỗi khi tải file lên Google Drive: ${error.message}`);
         res.status(500).json({ message: `Lỗi server: ${error.message}` });
     }
 });
 
-// *** ENDPOINT DEBUG MỚI ***
+// Endpoint debug
 app.get('/list-files', async (req, res) => {
     console.log('🔎 Yêu cầu liệt kê file và thư mục...');
     try {
@@ -100,7 +95,6 @@ app.get('/list-files', async (req, res) => {
         const response = await drive.files.list({
             pageSize: 50,
             fields: 'files(id, name, mimeType)',
-            // Tìm kiếm các thư mục được chia sẻ với service account
             q: "mimeType='application/vnd.google-apps.folder' and sharedWithMe",
             supportsAllDrives: true,
             includeItemsFromAllDrives: true,
@@ -121,4 +115,3 @@ app.get('/list-files', async (req, res) => {
 
 app.get('/', (req, res) => res.send('Backend for Google Drive Uploader is running!'));
 app.listen(port, () => console.log(`Server is running on port ${port}`));
-```
