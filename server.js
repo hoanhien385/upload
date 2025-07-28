@@ -17,37 +17,33 @@ const upload = multer({
     limits: { fileSize: 20 * 1024 * 1024 },
 });
 
-// *** PHƯƠNG THỨC XÁC THỰC ĐÃ SỬA LỖI DỨT ĐIỂM ***
+// PHƯƠNG THỨC XÁC THỰC GOOGLE
 const authenticateGoogle = () => {
-    console.log('Bắt đầu quá trình xác thực Google...');
+    console.log('🔑 Bắt đầu quá trình xác thực Google...');
 
-    // Lấy nội dung JSON trực tiếp từ biến môi trường GOOGLE_CREDENTIALS
     const credentialsJson = process.env.GOOGLE_CREDENTIALS;
 
     if (!credentialsJson) {
-        console.error('CÁC BIẾN MÔI TRƯỜNG HIỆN CÓ:', Object.keys(process.env).join(', '));
-        throw new Error('LỖI CẤU HÌNH: Không tìm thấy biến môi trường "GOOGLE_CREDENTIALS". Vui lòng kiểm tra lại mục "Environment" trên Render.');
+        console.error('❌ Không tìm thấy biến môi trường "GOOGLE_CREDENTIALS"');
+        throw new Error('Lỗi cấu hình: GOOGLE_CREDENTIALS không tồn tại');
     }
 
     try {
         const credentials = JSON.parse(credentialsJson);
         const auth = new google.auth.GoogleAuth({
             credentials,
-            // *** ĐÃ SỬA LỖI CÚ PHÁP CUỐI CÙNG TẠI ĐÂY ***
-            // Giá trị scopes phải là một chuỗi URL bình thường, không chứa ký tự Markdown.
             scopes: ['https://www.googleapis.com/auth/drive.file'],
         });
         return google.drive({ version: 'v3', auth });
     } catch (error) {
-        console.error('Lỗi khi phân tích JSON từ biến GOOGLE_CREDENTIALS:', error.message);
-        throw new Error('Biến môi trường "GOOGLE_CREDENTIALS" chứa nội dung JSON không hợp lệ.');
+        console.error('❌ Lỗi JSON GOOGLE_CREDENTIALS:', error.message);
+        throw new Error('GOOGLE_CREDENTIALS không hợp lệ.');
     }
 };
 
 // Endpoint để upload file
 app.post('/upload', upload.single('file'), async (req, res) => {
-    // Dòng debug để kiểm tra biến môi trường
-    console.log(`DEBUG: Value of GOOGLE_DRIVE_FOLDER_ID is: ${process.env.GOOGLE_DRIVE_FOLDER_ID}`);
+    console.log(`📂 GOOGLE_DRIVE_FOLDER_ID = ${process.env.GOOGLE_DRIVE_FOLDER_ID}`);
 
     try {
         if (!req.file) {
@@ -55,10 +51,24 @@ app.post('/upload', upload.single('file'), async (req, res) => {
         }
 
         const drive = authenticateGoogle();
+        const folderId = process.env.GOOGLE_DRIVE_FOLDER_ID;
+
+        // 📋 KIỂM TRA QUYỀN TRUY CẬP FOLDER
+        try {
+            const permissions = await drive.permissions.list({
+                fileId: folderId,
+                supportsAllDrives: true,
+            });
+            console.log('✅ Folder permissions:', JSON.stringify(permissions.data, null, 2));
+        } catch (permErr) {
+            console.error('❌ Không thể truy cập thư mục Drive. Lý do:', permErr.message);
+            throw new Error('Service account không có quyền truy cập thư mục Drive được chỉ định.');
+        }
+
         const bufferStream = new stream.PassThrough();
         bufferStream.end(req.file.buffer);
 
-        // Tải file lên Google Drive
+        // 🆙 TẢI FILE LÊN GOOGLE DRIVE
         const { data: fileData } = await drive.files.create({
             media: {
                 mimeType: req.file.mimetype,
@@ -66,7 +76,7 @@ app.post('/upload', upload.single('file'), async (req, res) => {
             },
             requestBody: {
                 name: req.file.originalname,
-                parents: process.env.GOOGLE_DRIVE_FOLDER_ID ? [process.env.GOOGLE_DRIVE_FOLDER_ID] : [],
+                parents: folderId ? [folderId] : [],
             },
             fields: 'id, webViewLink',
             supportsAllDrives: true,
@@ -76,7 +86,7 @@ app.post('/upload', upload.single('file'), async (req, res) => {
             throw new Error('Upload file không thành công, không nhận được ID file.');
         }
 
-        // Cấp quyền công khai cho file
+        // 🌐 CẤP QUYỀN CÔNG KHAI
         await drive.permissions.create({
             fileId: fileData.id,
             requestBody: {
@@ -86,24 +96,25 @@ app.post('/upload', upload.single('file'), async (req, res) => {
             supportsAllDrives: true,
         });
 
-        console.log(`File uploaded successfully. Link: ${fileData.webViewLink}`);
+        console.log(`✅ Tải file thành công: ${fileData.webViewLink}`);
 
-        // Trả về link cho frontend
         res.status(200).json({
             message: 'Tải file thành công!',
-            link: fileData.webViewLink
+            link: fileData.webViewLink,
         });
 
     } catch (error) {
-        console.error('Lỗi khi tải file lên Google Drive:', error.message);
+        console.error('🚫 Lỗi khi tải file lên Google Drive:', error.message);
         res.status(500).json({ message: `Lỗi server: ${error.message}` });
     }
 });
 
+// Trang mặc định
 app.get('/', (req, res) => {
     res.send('Backend for Google Drive Uploader is running!');
 });
 
+// Lắng nghe cổng
 app.listen(port, () => {
-    console.log(`Server is running on port ${port}`);
+    console.log(`🚀 Server is running on port ${port}`);
 });
