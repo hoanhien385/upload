@@ -167,6 +167,23 @@
 
             try {
                 const response = await fetch(`${BACKEND_URL}/list-files`);
+
+                // *** CẢI TIẾN GỠ LỖI ***
+                // Kiểm tra xem phản hồi có thành công và là JSON không
+                if (!response.ok) {
+                    // Nếu không thành công (ví dụ: lỗi 404, 500), đọc và hiển thị nội dung lỗi
+                    const errorText = await response.text();
+                    throw new Error(`Server trả về lỗi ${response.status}. Nội dung:\n\n${errorText}`);
+                }
+
+                const contentType = response.headers.get("content-type");
+                if (!contentType || !contentType.includes("application/json")) {
+                    // Nếu không phải JSON, đọc và hiển thị nội dung
+                    const responseText = await response.text();
+                    throw new Error(`Phản hồi không phải là JSON. Nội dung nhận được:\n\n${responseText}`);
+                }
+                // *** KẾT THÚC CẢI TIẾN ***
+
                 const result = await response.json();
 
                 debugStatus.textContent = result.message;
@@ -180,7 +197,7 @@
                     debugOutput.textContent = 'Không có mục nào được tìm thấy.';
                 }
             } catch (error) {
-                debugStatus.textContent = 'Lỗi khi kết nối đến server.';
+                debugStatus.textContent = 'Đã xảy ra lỗi!';
                 debugOutput.textContent = error.message;
             }
         };
