@@ -2,75 +2,35 @@
 <html lang="vi">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Tải File Lên Google Drive</title>
-  <script src="https://cdn.tailwindcss.com"></script>
-  <link rel="preconnect" href="https://fonts.googleapis.com" />
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
-  <style>
-    body {
-      font-family: 'Inter', sans-serif;
-      background-color: #f0f2f5;
-    }
-    .loader {
-      border: 4px solid #f3f3f3;
-      border-radius: 50%;
-      border-top: 4px solid #3498db;
-      width: 40px;
-      height: 40px;
-      animation: spin 2s linear infinite;
-    }
-    @keyframes spin {
-      0% { transform: rotate(0deg); }
-      100% { transform: rotate(360deg); }
-    }
-  </style>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Uploader Google Drive</title>
+  <script defer src="script.js"></script>
+  <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
 </head>
-<body class="flex items-center justify-center min-h-screen p-4">
+<body class="bg-gray-100 text-gray-900">
+  <div class="max-w-xl mx-auto mt-10 p-6 bg-white rounded-xl shadow-md">
+    <h1 class="text-2xl font-bold mb-4 text-center">Tải lên Google Drive (OAuth)</h1>
 
-  <div class="w-full max-w-2xl mx-auto bg-white rounded-xl shadow-lg p-8 space-y-6">
-    <div class="text-center">
-      <h1 class="text-3xl font-bold text-gray-800">Tải File Lên Google Drive</h1>
-      <p class="text-gray-500 mt-2">Chọn một file và tải nó lên Drive của bạn một cách an toàn.</p>
-    </div>
+    <input type="file" id="file_input" class="mb-3 w-full p-2 border rounded" />
+    <p id="file_name" class="mb-3 text-sm text-gray-600"></p>
 
-    <!-- Vùng Upload File -->
-    <div id="upload_section" class="text-center p-8 border-2 border-dashed border-gray-300 rounded-xl">
-      <input type="file" id="file_input" class="hidden" />
-      <label for="file_input" class="cursor-pointer">
-        <svg class="mx-auto h-12 w-12 text-gray-400" stroke="currentColor" fill="none" viewBox="0 0 48 48" aria-hidden="true">
-          <path d="M28 8H12a4 4 0 00-4 4v20m32-12v8m0 0v8a4 4 0 01-4 4H12a4 4 0 01-4-4v-4m32-4l-3.172-3.172a4 4 0 00-5.656 0L28 28M8 32l9.172-9.172a4 4 0 015.656 0L28 28" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
+    <button id="upload_button" class="hidden bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700 transition disabled:opacity-50">Tải lên</button>
+
+    <div id="result_section" class="mt-5 hidden">
+      <div id="loading_indicator" class="flex items-center space-x-2 text-blue-600">
+        <svg class="animate-spin h-5 w-5 text-blue-600" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+          <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+          <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z"></path>
         </svg>
-        <p class="mt-2 text-lg font-medium text-blue-600">Nhấn để chọn file</p>
-        <p id="file_name" class="mt-1 text-sm text-gray-500"></p>
-      </label>
-      <button id="upload_button" class="hidden mt-4 bg-green-600 hover:bg-green-700 text-white font-bold py-3 px-6 rounded-lg transition duration-300 disabled:bg-gray-400" disabled>Tải lên</button>
-    </div>
-
-    <!-- Vùng hiển thị kết quả -->
-    <div id="result_section" class="hidden text-center space-y-4">
-      <div id="loading_indicator" class="hidden mx-auto loader"></div>
-      <p id="status_message" class="text-lg font-medium text-gray-700"></p>
-      <div id="link_container" class="hidden flex items-center justify-center">
-        <input id="file_link" type="text" readonly class="w-full max-w-md p-3 border border-gray-300 rounded-l-lg bg-gray-50 focus:outline-none focus:ring-2 focus:ring-blue-500" />
-        <button id="copy_button" class="bg-gray-700 hover:bg-gray-800 text-white font-bold p-3 rounded-r-lg">
-          <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" /></svg>
-        </button>
+        <span>Đang xử lý...</span>
       </div>
-      <p id="copy_success" class="text-green-500 font-medium hidden">Đã sao chép link!</p>
-    </div>
 
-    <!-- Vùng Debug -->
-    <div class="mt-6 p-4 bg-gray-100 rounded-lg">
-      <h2 class="text-lg font-semibold text-gray-700">Công cụ Gỡ lỗi</h2>
-      <p class="text-sm text-gray-600 mt-1">Nếu gặp lỗi, hãy nhấn nút này để kiểm tra xem Service Account có quyền truy cập vào thư mục bạn đã cấu hình trên Render hay không.</p>
-      <button id="debug_button" class="mt-3 bg-yellow-500 hover:bg-yellow-600 text-white font-bold py-2 px-4 rounded-lg transition duration-300">
-        Kiểm tra quyền truy cập thư mục
-      </button>
-      <div id="debug_result_section" class="hidden mt-3 text-left">
-        <p id="debug_status" class="font-medium"></p>
-        <pre id="debug_output" class="mt-2 p-3 bg-gray-800 text-white rounded-md text-sm whitespace-pre-wrap break-all"></pre>
+      <p id="status_message" class="mt-3 text-sm font-medium text-gray-700"></p>
+
+      <div id="link_container" class="mt-4 hidden">
+        <input id="file_link" type="text" readonly class="w-full p-2 border rounded mb-2" />
+        <button id="copy_button" class="bg-green-600 text-white px-3 py-1 rounded hover:bg-green-700 transition">Sao chép liên kết</button>
+        <p id="copy_success" class="text-green-600 text-sm mt-2 hidden">✔️ Đã sao chép liên kết!</p>
       </div>
     </div>
   </div>
@@ -88,10 +48,6 @@
     const fileLinkInput = document.getElementById('file_link');
     const copyButton = document.getElementById('copy_button');
     const copySuccessMessage = document.getElementById('copy_success');
-    const debugButton = document.getElementById('debug_button');
-    const debugResultSection = document.getElementById('debug_result_section');
-    const debugStatus = document.getElementById('debug_status');
-    const debugOutput = document.getElementById('debug_output');
 
     fileInput.onchange = () => {
       if (fileInput.files.length > 0) {
@@ -116,29 +72,29 @@
       formData.append('file', file);
 
       resultSection.style.display = 'block';
-      loadingIndicator.style.display = 'block';
+      loadingIndicator.style.display = 'flex';
       statusMessage.textContent = `Đang tải lên file "${file.name}"...`;
       uploadButton.disabled = true;
       linkContainer.style.display = 'none';
       copySuccessMessage.style.display = 'none';
 
       try {
-        const response = await fetch(`${BACKEND_URL}/upload`, {
+        const response = await fetch(`${BACKEND_URL}/oauth/upload`, {
           method: 'POST',
+          credentials: 'include',
           body: formData
         });
 
         const result = await response.json();
-        if (!response.ok) throw new Error(result.message || 'Có lỗi xảy ra từ phía server.');
+        if (!response.ok) throw new Error(result.message || 'Lỗi server.');
 
         loadingIndicator.style.display = 'none';
-        statusMessage.textContent = 'Đã tạo link chia sẻ thành công!';
+        statusMessage.textContent = '✅ Đã tạo liên kết chia sẻ!';
         fileLinkInput.value = result.link;
-        linkContainer.style.display = 'flex';
+        linkContainer.style.display = 'block';
       } catch (error) {
-        console.error(error);
         loadingIndicator.style.display = 'none';
-        statusMessage.textContent = `Đã xảy ra lỗi: ${error.message}`;
+        statusMessage.textContent = `❌ Lỗi: ${error.message}`;
       } finally {
         uploadButton.disabled = false;
       }
@@ -148,39 +104,9 @@
       try {
         await navigator.clipboard.writeText(fileLinkInput.value);
         copySuccessMessage.style.display = 'block';
-        setTimeout(() => { copySuccessMessage.style.display = 'none'; }, 2000);
-      } catch (err) {
+        setTimeout(() => copySuccessMessage.style.display = 'none', 2000);
+      } catch {
         alert('Không thể sao chép liên kết.');
-      }
-    };
-
-    debugButton.onclick = async () => {
-      debugResultSection.style.display = 'block';
-      debugStatus.textContent = 'Đang kiểm tra...';
-      debugOutput.textContent = '';
-
-      try {
-        const response = await fetch(`${BACKEND_URL}/check-folder-access`);
-        const result = await response.json();
-
-        if (result.success) {
-          debugStatus.textContent = '✅ ' + result.message;
-          const data = result.data;
-          debugOutput.textContent =
-            `Tên thư mục: ${data.name}\n` +
-            `ID: ${data.id}\n` +
-            `Link: ${data.link}\n` +
-            `Đã được chia sẻ: ${data.isShared}\n` +
-            `Có thể thêm file: ${data.canAddFiles}\n\n` +
-            `👉 Gợi ý: ${data.suggestion}`;
-        } else {
-          debugStatus.textContent = '❌ ' + (result.message || 'Đã xảy ra lỗi không xác định.');
-          debugOutput.textContent = `👉 Gợi ý: ${result.suggestion || 'Vui lòng kiểm tra log trên Render để biết thêm chi tiết.'}`;
-        }
-
-      } catch (error) {
-        debugStatus.textContent = 'Lỗi kết nối!';
-        debugOutput.textContent = `Không thể kết nối đến server. Chi tiết: ${error.message}`;
       }
     };
   </script>
