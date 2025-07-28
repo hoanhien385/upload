@@ -36,7 +36,7 @@
         }
     </style>
 </head>
-<body class="flex items-center justify-center min-h-screen">
+<body class="flex items-center justify-center min-h-screen p-4">
 
     <div class="w-full max-w-2xl mx-auto bg-white rounded-xl shadow-lg p-8 space-y-6">
         <div class="text-center">
@@ -69,43 +69,50 @@
             </div>
             <p id="copy_success" class="text-green-500 font-medium hidden">Đã sao chép link!</p>
         </div>
+
+        <!-- Vùng Debug mới -->
+        <div class="mt-6 p-4 bg-gray-100 rounded-lg">
+            <h2 class="text-lg font-semibold text-gray-700">Công cụ Gỡ lỗi</h2>
+            <p class="text-sm text-gray-600 mt-1">Nếu bạn gặp lỗi, hãy nhấn nút này để kiểm tra xem Service Account đã thấy thư mục bạn chia sẻ chưa và lấy ID chính xác.</p>
+            <button id="debug_button" class="mt-3 bg-yellow-500 hover:bg-yellow-600 text-white font-bold py-2 px-4 rounded-lg transition duration-300">
+                Kiểm tra quyền truy cập & Lấy ID
+            </button>
+            <div id="debug_result_section" class="hidden mt-3 text-left">
+                <p id="debug_status" class="font-medium"></p>
+                <pre id="debug_output" class="mt-2 p-3 bg-gray-800 text-white rounded-md text-sm whitespace-pre-wrap break-all"></pre>
+            </div>
+        </div>
     </div>
 
     <script type="text/javascript">
-        // ===================================================================================
-        // CẤU HÌNH
-        // URL của ứng dụng backend bạn đã triển khai trên Render.
-        // ===================================================================================
-        const BACKEND_URL = 'https://upload-nxbg.onrender.com'; // URL backend của bạn
+        const BACKEND_URL = 'https://upload-nxbg.onrender.com';
 
-        // Lấy các phần tử trên trang
-        const uploadSection = document.getElementById('upload_section');
-        const resultSection = document.getElementById('result_section');
         const fileInput = document.getElementById('file_input');
         const fileNameDisplay = document.getElementById('file_name');
         const uploadButton = document.getElementById('upload_button');
-        const statusMessage = document.getElementById('status_message');
+        const resultSection = document.getElementById('result_section');
         const loadingIndicator = document.getElementById('loading_indicator');
+        const statusMessage = document.getElementById('status_message');
         const linkContainer = document.getElementById('link_container');
         const fileLinkInput = document.getElementById('file_link');
         const copyButton = document.getElementById('copy_button');
         const copySuccessMessage = document.getElementById('copy_success');
+        const debugButton = document.getElementById('debug_button');
+        const debugResultSection = document.getElementById('debug_result_section');
+        const debugStatus = document.getElementById('debug_status');
+        const debugOutput = document.getElementById('debug_output');
 
-        // Xử lý khi người dùng chọn file
         fileInput.onchange = () => {
             if (fileInput.files.length > 0) {
                 const file = fileInput.files[0];
                 fileNameDisplay.textContent = `File đã chọn: ${file.name} (${(file.size / 1024 / 1024).toFixed(2)} MB)`;
                 uploadButton.disabled = false;
                 uploadButton.style.display = 'inline-block';
-                resultSection.style.display = 'none'; // Ẩn kết quả cũ
+                resultSection.style.display = 'none';
             }
         };
         
-        // Xử lý khi nhấn nút Tải lên
         uploadButton.onclick = () => {
-            // Đã xóa phần kiểm tra URL không cần thiết.
-            // Giờ đây, ứng dụng sẽ luôn cố gắng upload khi nhấn nút.
             if (fileInput.files.length > 0) {
                 uploadFile(fileInput.files[0]);
             } else {
@@ -113,13 +120,10 @@
             }
         };
 
-        // Hàm chính để tải file lên backend
         async function uploadFile(file) {
-            // 1. Chuẩn bị FormData để gửi file
             const formData = new FormData();
             formData.append('file', file);
 
-            // 2. Hiển thị trạng thái đang tải
             resultSection.style.display = 'block';
             loadingIndicator.style.display = 'block';
             statusMessage.textContent = `Đang tải lên file "${file.name}"...`;
@@ -128,43 +132,57 @@
             copySuccessMessage.style.display = 'none';
 
             try {
-                // 3. Gửi yêu cầu POST đến backend
                 const response = await fetch(`${BACKEND_URL}/upload`, {
                     method: 'POST',
                     body: formData,
                 });
-
                 const result = await response.json();
-
                 if (!response.ok) {
-                    // Nếu server trả về lỗi, hiển thị thông báo lỗi
                     throw new Error(result.message || 'Có lỗi xảy ra từ phía server.');
                 }
-
-                // 4. Hiển thị kết quả thành công
                 loadingIndicator.style.display = 'none';
                 statusMessage.textContent = 'Đã tạo link chia sẻ thành công!';
                 fileLinkInput.value = result.link;
                 linkContainer.style.display = 'flex';
-
             } catch (error) {
                 console.error(error);
                 loadingIndicator.style.display = 'none';
                 statusMessage.textContent = `Đã xảy ra lỗi: ${error.message}`;
             } finally {
-                // 5. Kích hoạt lại nút upload dù thành công hay thất bại
                 uploadButton.disabled = false;
             }
         }
         
-        // Xử lý sao chép link
         copyButton.onclick = () => {
             fileLinkInput.select();
             document.execCommand('copy');
             copySuccessMessage.style.display = 'block';
-            setTimeout(() => {
-                copySuccessMessage.style.display = 'none';
-            }, 2000);
+            setTimeout(() => { copySuccessMessage.style.display = 'none'; }, 2000);
+        };
+
+        debugButton.onclick = async () => {
+            debugResultSection.style.display = 'block';
+            debugStatus.textContent = 'Đang kiểm tra...';
+            debugOutput.textContent = '';
+
+            try {
+                const response = await fetch(`${BACKEND_URL}/list-files`);
+                const result = await response.json();
+
+                debugStatus.textContent = result.message;
+
+                if (result.files && result.files.length > 0) {
+                    const formattedFiles = result.files.map(file => {
+                        return `- Tên: ${file.name}\n  ID:   ${file.id}\n  Loại: ${file.mimeType}`;
+                    }).join('\n\n');
+                    debugOutput.textContent = formattedFiles;
+                } else {
+                    debugOutput.textContent = 'Không có mục nào được tìm thấy.';
+                }
+            } catch (error) {
+                debugStatus.textContent = 'Lỗi khi kết nối đến server.';
+                debugOutput.textContent = error.message;
+            }
         };
     </script>
 </body>
