@@ -1,114 +1,51 @@
 <!DOCTYPE html>
 <html lang="vi">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>Uploader Google Drive</title>
-  <script defer src="script.js"></script>
-  <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
-</head>
-<body class="bg-gray-100 text-gray-900">
-  <div class="max-w-xl mx-auto mt-10 p-6 bg-white rounded-xl shadow-md">
-    <h1 class="text-2xl font-bold mb-4 text-center">Tải lên Google Drive (OAuth)</h1>
-
-    <input type="file" id="file_input" class="mb-3 w-full p-2 border rounded" />
-    <p id="file_name" class="mb-3 text-sm text-gray-600"></p>
-
-    <button id="upload_button" class="hidden bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700 transition disabled:opacity-50">Tải lên</button>
-
-    <div id="result_section" class="mt-5 hidden">
-      <div id="loading_indicator" class="flex items-center space-x-2 text-blue-600">
-        <svg class="animate-spin h-5 w-5 text-blue-600" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-          <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
-          <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z"></path>
-        </svg>
-        <span>Đang xử lý...</span>
-      </div>
-
-      <p id="status_message" class="mt-3 text-sm font-medium text-gray-700"></p>
-
-      <div id="link_container" class="mt-4 hidden">
-        <input id="file_link" type="text" readonly class="w-full p-2 border rounded mb-2" />
-        <button id="copy_button" class="bg-green-600 text-white px-3 py-1 rounded hover:bg-green-700 transition">Sao chép liên kết</button>
-        <p id="copy_success" class="text-green-600 text-sm mt-2 hidden">✔️ Đã sao chép liên kết!</p>
-      </div>
-    </div>
-  </div>
-
+  <meta charset="UTF-8">
+  <title>Upload Google Drive (OAuth)</title>
   <script>
-    const BACKEND_URL = 'https://upload-nxbg.onrender.com';
+    async function uploadFile() {
+      const input = document.getElementById('fileInput');
+      const file = input.files[0];
+      if (!file) return alert('Chọn file trước đã!');
 
-    const fileInput = document.getElementById('file_input');
-    const fileNameDisplay = document.getElementById('file_name');
-    const uploadButton = document.getElementById('upload_button');
-    const resultSection = document.getElementById('result_section');
-    const loadingIndicator = document.getElementById('loading_indicator');
-    const statusMessage = document.getElementById('status_message');
-    const linkContainer = document.getElementById('link_container');
-    const fileLinkInput = document.getElementById('file_link');
-    const copyButton = document.getElementById('copy_button');
-    const copySuccessMessage = document.getElementById('copy_success');
-
-    fileInput.onchange = () => {
-      if (fileInput.files.length > 0) {
-        const file = fileInput.files[0];
-        fileNameDisplay.textContent = `File đã chọn: ${file.name} (${(file.size / 1024 / 1024).toFixed(2)} MB)`;
-        uploadButton.disabled = false;
-        uploadButton.style.display = 'inline-block';
-        resultSection.style.display = 'none';
-      }
-    };
-
-    uploadButton.onclick = () => {
-      if (fileInput.files.length > 0) {
-        uploadFile(fileInput.files[0]);
-      } else {
-        alert("Vui lòng chọn một file trước khi tải lên.");
-      }
-    };
-
-    async function uploadFile(file) {
       const formData = new FormData();
       formData.append('file', file);
 
-      resultSection.style.display = 'block';
-      loadingIndicator.style.display = 'flex';
-      statusMessage.textContent = `Đang tải lên file "${file.name}"...`;
-      uploadButton.disabled = true;
-      linkContainer.style.display = 'none';
-      copySuccessMessage.style.display = 'none';
-
       try {
-        const response = await fetch(`${BACKEND_URL}/oauth/upload`, {
+        const res = await fetch('https://upload-nxbg.onrender.com/upload', {
           method: 'POST',
-          credentials: 'include',
-          body: formData
+          body: formData,
+          credentials: 'include', // để gửi session cookie
         });
 
-        const result = await response.json();
-        if (!response.ok) throw new Error(result.message || 'Lỗi server.');
-
-        loadingIndicator.style.display = 'none';
-        statusMessage.textContent = '✅ Đã tạo liên kết chia sẻ!';
-        fileLinkInput.value = result.link;
-        linkContainer.style.display = 'block';
-      } catch (error) {
-        loadingIndicator.style.display = 'none';
-        statusMessage.textContent = `❌ Lỗi: ${error.message}`;
-      } finally {
-        uploadButton.disabled = false;
+        const data = await res.json();
+        if (res.ok) {
+          document.getElementById('result').innerHTML =
+            `✅ Upload thành công: <a href="${data.link}" target="_blank">${data.link}</a>`;
+        } else {
+          throw new Error(data.message || 'Upload thất bại');
+        }
+      } catch (err) {
+        console.error(err);
+        alert('❌ Upload thất bại: ' + err.message);
       }
     }
 
-    copyButton.onclick = async () => {
-      try {
-        await navigator.clipboard.writeText(fileLinkInput.value);
-        copySuccessMessage.style.display = 'block';
-        setTimeout(() => copySuccessMessage.style.display = 'none', 2000);
-      } catch {
-        alert('Không thể sao chép liên kết.');
-      }
-    };
+    function loginWithGoogle() {
+      window.location.href = 'https://upload-nxbg.onrender.com/auth';
+    }
   </script>
+</head>
+<body class="font-sans p-6">
+  <h1 class="text-xl mb-4">📁 Upload Google Drive (OAuth)</h1>
+  <button onclick="loginWithGoogle()" class="bg-blue-600 text-white px-4 py-2 rounded">🔑 Đăng nhập Google</button>
+
+  <div class="mt-6">
+    <input type="file" id="fileInput" class="border p-2">
+    <button onclick="uploadFile()" class="bg-green-600 text-white px-4 py-2 ml-2 rounded">📤 Upload</button>
+  </div>
+
+  <div id="result" class="mt-4 text-blue-600"></div>
 </body>
 </html>
