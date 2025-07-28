@@ -22,7 +22,8 @@ const authenticateGoogle = () => {
         const auth = new google.auth.GoogleAuth({
             credentials,
             // *** ĐÃ SỬA LỖI CÚ PHÁP DỨT ĐIỂM TẠI ĐÂY ***
-            scopes: '[https://www.googleapis.com/auth/drive.file](https://www.googleapis.com/auth/drive.file)',
+            // Giá trị scopes phải là một chuỗi URL bình thường, không chứa ký tự Markdown.
+            scopes: ['https://www.googleapis.com/auth/drive.file'],
         });
         return google.drive({ version: 'v3', auth });
     } catch (error) {
@@ -82,7 +83,7 @@ app.post('/upload', async (req, res) => {
         res.json({ message: 'Tải file thành công!', link: fileData.webViewLink });
 
     } catch (error) {
-        console.error(`� Lỗi khi tải file lên Google Drive: ${error.message}`);
+        console.error(`🚫 Lỗi khi tải file lên Google Drive: ${error.message}`);
         res.status(500).json({ message: `Lỗi server: ${error.message}` });
     }
 });
