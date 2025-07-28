@@ -73,9 +73,9 @@
         <!-- Vùng Debug mới -->
         <div class="mt-6 p-4 bg-gray-100 rounded-lg">
             <h2 class="text-lg font-semibold text-gray-700">Công cụ Gỡ lỗi</h2>
-            <p class="text-sm text-gray-600 mt-1">Nếu bạn gặp lỗi, hãy nhấn nút này để kiểm tra xem Service Account đã thấy thư mục bạn chia sẻ chưa và lấy ID chính xác.</p>
+            <p class="text-sm text-gray-600 mt-1">Nếu gặp lỗi, hãy nhấn nút này để kiểm tra xem Service Account có quyền truy cập vào thư mục bạn đã cấu hình trên Render hay không.</p>
             <button id="debug_button" class="mt-3 bg-yellow-500 hover:bg-yellow-600 text-white font-bold py-2 px-4 rounded-lg transition duration-300">
-                Kiểm tra quyền truy cập & Lấy ID
+                Kiểm tra quyền truy cập thư mục
             </button>
             <div id="debug_result_section" class="hidden mt-3 text-left">
                 <p id="debug_status" class="font-medium"></p>
@@ -166,39 +166,27 @@
             debugOutput.textContent = '';
 
             try {
-                const response = await fetch(`${BACKEND_URL}/list-files`);
-
-                // *** CẢI TIẾN GỠ LỖI ***
-                // Kiểm tra xem phản hồi có thành công và là JSON không
-                if (!response.ok) {
-                    // Nếu không thành công (ví dụ: lỗi 404, 500), đọc và hiển thị nội dung lỗi
-                    const errorText = await response.text();
-                    throw new Error(`Server trả về lỗi ${response.status}. Nội dung:\n\n${errorText}`);
-                }
-
-                const contentType = response.headers.get("content-type");
-                if (!contentType || !contentType.includes("application/json")) {
-                    // Nếu không phải JSON, đọc và hiển thị nội dung
-                    const responseText = await response.text();
-                    throw new Error(`Phản hồi không phải là JSON. Nội dung nhận được:\n\n${responseText}`);
-                }
-                // *** KẾT THÚC CẢI TIẾN ***
-
+                const response = await fetch(`${BACKEND_URL}/check-folder-access`);
                 const result = await response.json();
 
-                debugStatus.textContent = result.message;
-
-                if (result.files && result.files.length > 0) {
-                    const formattedFiles = result.files.map(file => {
-                        return `- Tên: ${file.name}\n  ID:   ${file.id}\n  Loại: ${file.mimeType}`;
-                    }).join('\n\n');
-                    debugOutput.textContent = formattedFiles;
+                if (result.success) {
+                    debugStatus.textContent = '✅ ' + result.message;
+                    const data = result.data;
+                    debugOutput.textContent =
+                        `Tên thư mục: ${data.name}\n` +
+                        `ID: ${data.id}\n` +
+                        `Link: ${data.link}\n` +
+                        `Đã được chia sẻ: ${data.isShared}\n` +
+                        `Có thể thêm file: ${data.canAddFiles}\n\n` +
+                        `👉 Gợi ý: ${data.suggestion}`;
                 } else {
-                    debugOutput.textContent = 'Không có mục nào được tìm thấy.';
+                    debugStatus.textContent = '❌ ' + (result.message || 'Đã xảy ra lỗi không xác định.');
+                    debugOutput.textContent = `👉 Gợi ý: ${result.suggestion || 'Vui lòng kiểm tra log trên Render để biết thêm chi tiết.'}`;
                 }
+
             } catch (error) {
-                debugStatus.textContent = 'Đã xảy ra lỗi!';
-                debugOutput.textContent = error.message;
+                debugStatus.textContent = 'Lỗi kết nối!';
+                debugOutput.textContent = `Không thể kết nối đến server. Vui lòng kiểm tra lại URL backend và đảm bảo server đang chạy.\n\nChi tiết: ${error.message}`;
             }
         };
     </script>
