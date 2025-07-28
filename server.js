@@ -33,8 +33,7 @@ const authenticateGoogle = () => {
         const credentials = JSON.parse(credentialsJson);
         const auth = new google.auth.GoogleAuth({
             credentials,
-            // *** ĐÃ SỬA LỖI CÚ PHÁP CUỐI CÙNG TẠI ĐÂY ***
-            // Giá trị scopes phải là một chuỗi URL bình thường, không chứa ký tự Markdown.
+            // Giá trị scopes phải là một chuỗi URL bình thường.
             scopes: ['https://www.googleapis.com/auth/drive.file'],
         });
         return google.drive({ version: 'v3', auth });
@@ -63,22 +62,27 @@ app.post('/upload', upload.single('file'), async (req, res) => {
             },
             requestBody: {
                 name: req.file.originalname,
+                // ID của thư mục cha bây giờ là ID của Shared Drive (hoặc thư mục con trong đó)
                 parents: process.env.GOOGLE_DRIVE_FOLDER_ID ? [process.env.GOOGLE_DRIVE_FOLDER_ID] : [],
             },
             fields: 'id, webViewLink',
+            // *** THÊM DÒNG NÀY ĐỂ HỖ TRỢ SHARED DRIVE ***
+            supportsAllDrives: true,
         });
 
         if (!fileData.id) {
             throw new Error('Upload file không thành công, không nhận được ID file.');
         }
 
-        // Cấp quyền công khai cho file
+        // Cấp quyền công khai cho file (không cần thiết nếu Shared Drive đã được chia sẻ công khai)
+        // Nhưng chúng ta vẫn để lại để đảm bảo link luôn hoạt động.
         await drive.permissions.create({
             fileId: fileData.id,
             requestBody: {
                 role: 'reader',
                 type: 'anyone',
             },
+            supportsAllDrives: true, // Thêm cờ hỗ trợ cho Shared Drive
         });
 
         console.log(`File uploaded successfully. Link: ${fileData.webViewLink}`);
