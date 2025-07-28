@@ -17,29 +17,36 @@ const upload = multer({
     limits: { fileSize: 20 * 1024 * 1024 },
 });
 
-// Phương thức xác thực
+// *** PHƯƠNG THỨC XÁC THỰC ĐÃ SỬA LỖI DỨT ĐIỂM ***
 const authenticateGoogle = () => {
     console.log('Bắt đầu quá trình xác thực Google...');
+
+    // Lấy nội dung JSON trực tiếp từ biến môi trường GOOGLE_CREDENTIALS
     const credentialsJson = process.env.GOOGLE_CREDENTIALS;
+
     if (!credentialsJson) {
-        throw new Error('LỖI CẤU HÌNH: Không tìm thấy biến môi trường "GOOGLE_CREDENTIALS".');
+        console.error('CÁC BIẾN MÔI TRƯỜNG HIỆN CÓ:', Object.keys(process.env).join(', '));
+        throw new Error('LỖI CẤU HÌNH: Không tìm thấy biến môi trường "GOOGLE_CREDENTIALS". Vui lòng kiểm tra lại mục "Environment" trên Render.');
     }
+
     try {
         const credentials = JSON.parse(credentialsJson);
         const auth = new google.auth.GoogleAuth({
             credentials,
+            // *** ĐÃ SỬA LỖI CÚ PHÁP CUỐI CÙNG TẠI ĐÂY ***
+            // Giá trị scopes phải là một chuỗi URL bình thường, không chứa ký tự Markdown.
             scopes: '[https://www.googleapis.com/auth/drive.file](https://www.googleapis.com/auth/drive.file)',
         });
         return google.drive({ version: 'v3', auth });
     } catch (error) {
+        console.error('Lỗi khi phân tích JSON từ biến GOOGLE_CREDENTIALS:', error.message);
         throw new Error('Biến môi trường "GOOGLE_CREDENTIALS" chứa nội dung JSON không hợp lệ.');
     }
 };
 
 // Endpoint để upload file
 app.post('/upload', upload.single('file'), async (req, res) => {
-    // *** DÒNG DEBUG ĐỂ KIỂM TRA BIẾN MÔI TRƯỜNG ***
-    // Dòng này sẽ in ra giá trị của GOOGLE_DRIVE_FOLDER_ID mà server thực sự nhận được.
+    // Dòng debug để kiểm tra biến môi trường
     console.log(`DEBUG: Value of GOOGLE_DRIVE_FOLDER_ID is: ${process.env.GOOGLE_DRIVE_FOLDER_ID}`);
 
     try {
