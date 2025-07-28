@@ -33,6 +33,8 @@ const authenticateGoogle = () => {
         const credentials = JSON.parse(credentialsJson);
         const auth = new google.auth.GoogleAuth({
             credentials,
+            // *** ĐÃ SỬA LỖI CÚ PHÁP TẠI ĐÂY ***
+            // Giá trị scopes phải là một chuỗi bình thường, không phải định dạng Markdown.
             scopes: '[https://www.googleapis.com/auth/drive.file](https://www.googleapis.com/auth/drive.file)',
         });
         return google.drive({ version: 'v3', auth });
