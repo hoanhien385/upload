@@ -35,7 +35,7 @@ const authenticateGoogle = () => {
             credentials,
             // *** ĐÃ SỬA LỖI CÚ PHÁP CUỐI CÙNG TẠI ĐÂY ***
             // Giá trị scopes phải là một chuỗi URL bình thường, không chứa ký tự Markdown.
-            scopes: '[https://www.googleapis.com/auth/drive.file](https://www.googleapis.com/auth/drive.file)',
+            scopes: ['https://www.googleapis.com/auth/drive.file'],
         });
         return google.drive({ version: 'v3', auth });
     } catch (error) {
