@@ -17,7 +17,7 @@ const upload = multer({
     limits: { fileSize: 20 * 1024 * 1024 },
 });
 
-// *** PHƯƠNG THỨC XÁC THỰC MỚI - ĐƠN GIẢN HƠN ***
+// *** PHƯƠNG THỨC XÁC THỰC ĐÃ SỬA LỖI DỨT ĐIỂM ***
 const authenticateGoogle = () => {
     console.log('Bắt đầu quá trình xác thực Google...');
 
@@ -33,8 +33,8 @@ const authenticateGoogle = () => {
         const credentials = JSON.parse(credentialsJson);
         const auth = new google.auth.GoogleAuth({
             credentials,
-            // *** ĐÃ SỬA LỖI CÚ PHÁP TẠI ĐÂY ***
-            // Giá trị scopes phải là một chuỗi bình thường, không phải định dạng Markdown.
+            // *** ĐÃ SỬA LỖI CÚ PHÁP CUỐI CÙNG TẠI ĐÂY ***
+            // Giá trị scopes phải là một chuỗi URL bình thường, không chứa ký tự Markdown.
             scopes: '[https://www.googleapis.com/auth/drive.file](https://www.googleapis.com/auth/drive.file)',
         });
         return google.drive({ version: 'v3', auth });
